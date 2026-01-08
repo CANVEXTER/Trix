@@ -1,3 +1,58 @@
+## BIOS & Windows Preparation (Very Important)
+
+Before booting the CachyOS installer, **you must adjust a few ASUS BIOS settings**.
+Skipping this step is one of the **most common reasons for installation failures**.
+
+> **Note**
+> These steps are standard for ASUS laptops and are covered in almost every CachyOS / Arch / ASUS dual-boot YouTube tutorial.
+
+---
+
+### Required BIOS Changes
+
+Enter BIOS (usually by pressing **F2** or **DEL** during boot) and make sure:
+
+* **Disable Secure Boot**
+* **Disable Fast Boot**
+* **Disable Intel VMD (Volume Management Device)**
+
+> **Why this matters**
+> Intel VMD hides NVMe drives from the Linux installer, causing disks to not appear at all.
+
+---
+
+### Windows-Specific (Dual Boot Only)
+
+If you are dual-booting with Windows:
+
+* **Disable BitLocker** in Windows *before* installing Linux
+
+  * Either fully turn it off
+  * Or decrypt the Windows drive
+
+> **Important**
+> Failing to disable BitLocker can:
+
+* Prevent Linux from accessing disks
+* Cause Windows boot issues later
+* Lock you out of your own data
+
+---
+
+### Final Reminder
+
+> **Do not skip this step**
+> BIOS misconfiguration causes more issues than Linux itself.
+
+If you’re unsure:
+
+* Search YouTube for:
+  **“ASUS CachyOS dual boot”** or **“ASUS Arch Linux install”**
+* Follow any recent guide — the BIOS steps are nearly identical.
+
+Once this is done, proceed with the CachyOS installation normally 🚀
+
+
 # The Easiest Linux Guide for ASUS ROG, TUF & Similar Laptops (CachyOS)
 
 > This guide is part of **Trix** — a personal collection of **tested fixes, workarounds, and setups** that I’ve actually experienced and verified.
