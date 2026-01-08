@@ -1,58 +1,49 @@
-# NVIDIA GPU passthrough with Distrobox using CDI (Arch / Arch-based)
+# NVIDIA GPU Passthrough with Distrobox using CDI (Arch / Arch-based)
 
-This document records a **tested, working workaround** for slow or stuck NVIDIA GPU initialization when using **Distrobox** containers.
+This document records a **tested, working solution** for slow, stuck, or hanging NVIDIA GPU initialization when using **Distrobox** containers.
 
-It is written for **Arch Linux and Arch-based distributions** (Arch, CachyOS, EndeavourOS, etc.) and assumes **Podman** as the container engine.
+It targets **Arch Linux and Arch-based distributions** (Arch, CachyOS, EndeavourOS, etc.) and assumes **Podman** as the container runtime.
 
-> Repository intent: **Trix** collects *practical fixes and workarounds that are verified in real systems*, not theoretical recipes.
+> **Repository intent**
+> **Trix** collects *real-world, verified fixes and workarounds* — not theoretical or copy-pasted recipes.
 
 ---
 
 ## Background (important context)
 
-Before anything else, understand this clearly:
+If a Distrobox container:
 
-* If your Distrobox container **takes a very long time to start** or appears to hang during NVIDIA integration
-* And you are using the `--nvidia` flag
+* Takes a very long time to start
+* Appears to freeze during NVIDIA initialization
+* Was created using the `--nvidia` flag
 
-➡️ **This is not your OS, not your GPU, and not Podman’s fault.**
+➡️ **This is not an OS issue, not a driver bug, and not Podman’s fault.**
 
-This is a **known limitation of Distrobox’s `--nvidia` flag**, because it relies on **legacy NVIDIA OCI hooks**.
+The root cause is Distrobox’s `--nvidia` flag relying on **legacy NVIDIA OCI hooks**, which are:
 
-Those hooks are increasingly deprecated and are **slow, fragile, and unnecessary** on modern systems.
+* Deprecated
+* Slow due to runtime probing
+* Fragile on modern systems
+* Unnecessary today
 
-A better approach exists: **Container Device Interface (CDI)**.
+The modern and supported solution is **Container Device Interface (CDI)**.
 
 ---
 
-## Quick principles (read this first)
+## Quick principles (read first)
 
-* Always use the **latest proprietary NVIDIA drivers** available for your kernel
-* The **simplest workaround** is: **do not use `--nvidia` at all**
-* If you *do* need GPU access inside containers → **use CDI**
+* Always use the **latest proprietary NVIDIA drivers** for your kernel
+* If you **don’t need GPU access**, do **not** use `--nvidia`
+* If you **do need GPU access**, use **CDI**
 * CDI is faster, simpler, and future-proof
 
 ---
 
-## Requirements (Arch / Arch-based)
+## Step 1 — Verify NVIDIA and CDI support (do this first)
 
-Make sure these are installed and working on the host:
+Before installing or changing anything, **verify what already works**.
 
-```bash
-sudo pacman -S nvidia nvidia-utils nvidia-container-toolkit podman distrobox
-```
-
-> Docker is **not covered** in this guide. You may experiment at your own risk.
->
-> **Podman is strongly recommended** and fully tested with this approach.
-
----
-
-## Step 1 — Verify the host is healthy
-
-Do **not** proceed unless all of the following work correctly.
-
-### NVIDIA driver
+### 1.1 Verify NVIDIA driver (host)
 
 ```bash
 nvidia-smi
@@ -62,91 +53,99 @@ Expected:
 
 * Driver version shown
 * GPU listed
-* No errors
+* No errors or delay
+
+If this fails, **fix your NVIDIA driver first**.
 
 ---
 
-### Podman
-
-```bash
-podman --version
-```
-
----
-
-### Distrobox
-
-```bash
-distrobox --version
-```
-
----
-
-### NVIDIA Container Toolkit (CDI provider)
+### 1.2 Verify NVIDIA Container Toolkit
 
 ```bash
 nvidia-ctk --version
 ```
 
-If any of these commands fail, fix that **before continuing**.
+If this command exists, continue to **Step 1.3**.
+If it does **not**, install the required packages (see Step 2).
 
 ---
 
-## Step 2 — Why NOT to use `--nvidia`
-
-The `--nvidia` flag:
-
-* Uses **legacy OCI hooks**
-* Performs slow device probing
-* Can block container startup
-* Is no longer the recommended path
-
-If you **do not need GPU access**, simply **avoid `--nvidia` entirely**.
-
-If you **do need GPU access**, continue below.
-
----
-
-## Step 3 — Generate NVIDIA CDI specification
-
-CDI exposes GPUs as **standard container devices**.
-
-Generate the spec on the host:
-
-```bash
-sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
-```
-
-Verify it:
+### 1.3 Verify CDI device availability
 
 ```bash
 nvidia-ctk cdi list
 ```
 
-Expected output includes entries such as:
+If you already see entries like:
 
 ```text
 nvidia.com/gpu=all
 nvidia.com/gpu=0
 ```
 
-If nothing is listed, CDI is not active yet.
+✅ CDI is already available — you may skip directly to **Step 4**.
+
+If **nothing is listed**, CDI is not generated yet — continue below.
 
 ---
 
-## Step 4 — Handle legacy NVIDIA OCI hooks (if present)
+## Step 2 — Install required packages (if missing)
 
-On some systems, legacy hooks may still exist and **conflict with CDI**.
+Install the required host packages:
 
-Check:
+```bash
+sudo pacman -S nvidia nvidia-utils nvidia-container-toolkit podman distrobox
+```
+
+After installation, **reboot is recommended**, then re-run:
+
+```bash
+nvidia-smi
+nvidia-ctk --version
+```
+
+Do not continue until both succeed.
+
+---
+
+## Step 3 — Generate NVIDIA CDI specification
+
+Generate the CDI spec manually:
+
+```bash
+sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+```
+
+Verify again:
+
+```bash
+nvidia-ctk cdi list
+```
+
+Expected output:
+
+```text
+nvidia.com/gpu=all
+nvidia.com/gpu=0
+```
+
+If devices appear, CDI is now active.
+
+---
+
+## Step 4 — Disable legacy NVIDIA OCI hooks (if present)
+
+Legacy hooks can **conflict with CDI**.
+
+Check for them:
 
 ```bash
 ls /usr/share/containers/oci/hooks.d/
 ```
 
-### If you see `oci-nvidia-hook.json`
+### If `oci-nvidia-hook.json` exists
 
-Disable it (do not delete permanently):
+Disable it safely:
 
 ```bash
 sudo mv /usr/share/containers/oci/hooks.d/oci-nvidia-hook.json \
@@ -159,17 +158,17 @@ Restart Podman:
 systemctl --user restart podman
 ```
 
-### If nothing NVIDIA-related is shown
+### If no NVIDIA hook is present
 
-That is **completely fine**. No action is required.
+That is normal on clean systems — no action required.
 
 ---
 
-## Step 5 — Recreate the Distrobox container (important)
+## Step 5 — Recreate the Distrobox container (mandatory)
 
-If your container was **ever created using `--nvidia`**, recreate it.
+⚠️ If the container was **ever created with `--nvidia`**, it **must be recreated**.
 
-### Remove old container
+### Remove the old container
 
 ```bash
 distrobox stop <name>
@@ -178,7 +177,7 @@ distrobox rm <name>
 
 ---
 
-### Create container using CDI (recommended)
+### Create a new container using CDI
 
 ```bash
 distrobox create \
@@ -190,12 +189,12 @@ distrobox create \
 Notes:
 
 * **Do NOT use `--nvidia`**
-* CDI handles GPU exposure
+* CDI exposes the GPU directly
 * `label=disable` avoids SELinux/AppArmor overhead
 
 ---
 
-## Step 6 — Verify GPU inside the container
+## Step 6 — Verify GPU access inside the container
 
 Enter the container:
 
@@ -211,121 +210,86 @@ nvidia-smi
 
 Expected:
 
-* Instant output
-* No freezing or long delay
-* GPU visible immediately
+* Immediate output
+* No hang or delay
+* GPU visible instantly
 
 ---
 
 ## Optional — Lightweight GPU warm-up (no persistence)
 
-On laptops or power-sensitive systems, **persistence mode is not required**.
+On laptops or power-sensitive systems, persistence mode is unnecessary.
 
-Instead, you may optionally warm the GPU *on demand*.
-
-This triggers NVIDIA initialization once, without keeping the GPU awake.
+Instead, initialize the GPU **once on demand**.
 
 ---
 
-### Fish shell
+### Fish
 
 ```fish
 alias warm-gpu 'nvidia-smi > /dev/null 2>&1'
 funcsave warm-gpu
 ```
 
-Usage:
-
-```bash
-warm-gpu
-distrobox enter <name>
-```
-
 ---
 
 ### Bash
 
-Add the alias to `~/.bashrc` (or `~/.bash_profile` if preferred):
-
 ```bash
 alias warm-gpu='nvidia-smi > /dev/null 2>&1'
-```
-
-Reload shell:
-
-```bash
-source ~/.bashrc
-```
-
-Usage:
-
-```bash
-warm-gpu
-distrobox enter <name>
 ```
 
 ---
 
 ### Zsh
 
-Add the alias to `~/.zshrc`:
-
 ```zsh
 alias warm-gpu='nvidia-smi > /dev/null 2>&1'
 ```
 
-Reload shell:
-
-```zsh
-source ~/.zshrc
-```
-
-Usage:
+Usage (all shells):
 
 ```bash
 warm-gpu
 distrobox enter <name>
 ```
 
----
-
-This approach avoids:
+This avoids:
 
 * Boot-time GPU wakeups
 * Idle power drain
-* Background NVIDIA services
+* Persistent NVIDIA services
 
 ---
 
-## Summary (what this setup achieves)
+## Summary — What this achieves
 
 * No legacy NVIDIA hooks
 * No `--nvidia` flag
-* Fast container startup
+* Fast, predictable container startup
 * GPU initializes only when needed
-* Works reliably on Arch-based systems
+* Reliable on Arch-based systems
 
-This is currently the **cleanest and most future-proof** way to use NVIDIA GPUs with Distrobox.
-
----
-
-## Notes on Docker
-
-Docker is **not tested** with this setup in this repository.
-
-You may experiment, but behavior may differ.
-
-Podman remains the **recommended and verified** engine.
+This is currently the **cleanest and most future-proof** NVIDIA + Distrobox setup.
 
 ---
 
-## End
+## Notes on Docker (single mention)
 
-If you are reading this in the **Trix** repository:
+Docker is **not tested** with this workflow in **Trix**.
 
-* This method has been tested on real systems
+It may work, but behavior can differ.
+
+**Podman remains the recommended and verified engine.**
+
+---
+
+## End notes
+
+Tested on real systems with:
+
 * NVIDIA proprietary drivers
 * Podman 5.x
 * Distrobox 1.8+
 
-Feel free to adapt this guide for other distributions.
+Adapt freely for other distributions or container workflows.
