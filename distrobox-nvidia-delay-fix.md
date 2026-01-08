@@ -9,6 +9,15 @@ It targets **Arch Linux and Arch-based distributions** (Arch, CachyOS, Endeavour
 
 ---
 
+## Notes on Docker
+Docker is **not tested** with this workflow in **Trix**.
+
+It may work, but behavior can differ.
+
+**Podman remains the recommended and verified engine.**
+
+---
+
 ## Background (important context)
 
 If a Distrobox container:
@@ -271,16 +280,6 @@ This avoids:
 * Reliable on Arch-based systems
 
 This is currently the **cleanest and most future-proof** NVIDIA + Distrobox setup.
-
----
-
-## Notes on Docker (single mention)
-
-Docker is **not tested** with this workflow in **Trix**.
-
-It may work, but behavior can differ.
-
-**Podman remains the recommended and verified engine.**
 
 ---
 
