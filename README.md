@@ -1,4 +1,4 @@
-# Trix
+# Tetricks
 
 Trix is a personal but shareable technical knowledge base:
 a collection of real problems, their root causes, and verified fixes.
