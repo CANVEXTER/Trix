@@ -55,7 +55,7 @@ Once this is done, proceed with the CachyOS installation normally 🚀
 
 # The Easiest Linux Guide for ASUS ROG, TUF & Similar Laptops (CachyOS)
 
-> This guide is part of **Trix** — a personal collection of **tested fixes, workarounds, and setups** that I’ve actually experienced and verified.
+> This guide is part of **Tetricks** — a personal collection of **tested fixes, workarounds, and setups** that I’ve actually experienced and verified.
 >
 > Anyone is welcome to adapt, improve, or suggest changes. Linux is collaborative by nature 🚀
 
@@ -282,4 +282,4 @@ I genuinely believe this setup works great for **many ASUS laptops**, especially
 ---
 
 **Contributions welcome. Improvements encouraged.**
-That’s what **Trix** is all about 🤝
+That’s what **Tetricks** is all about 🤝
