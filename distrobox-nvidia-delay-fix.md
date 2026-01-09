@@ -4,7 +4,6 @@ This document records a **tested, working solution** for slow, stuck, or hanging
 
 It targets **Arch Linux and Arch-based distributions** (Arch, CachyOS, EndeavourOS, etc.) and assumes **Podman** as the container runtime.
 
-> **Repository intent**
 > **Tetricks** collects *real-world, verified fixes and workarounds* — not theoretical or copy-pasted recipes.
 
 ---
